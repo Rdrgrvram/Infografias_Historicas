@@ -39,14 +39,14 @@ const Home = () => {
           data-aos="fade-up"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            ¿Listo para crear tu primera infografía?
+            ¿Eres administrador?
           </h2>
           <p className="text-lg mb-6">
-            Transforma datos históricos en contenido visual llamativo y automatizado.
+            Inicia sesion con este boton y accede a la base de datos.
           </p>
-          <Link to="/login">
+          <Link to="/admin">
             <button className="bg-white text-orange-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded shadow transform hover:scale-105 transition duration-200">
-              Empezar ahora
+              Iniciar sesion como administrador
             </button>
           </Link>
         </section>
