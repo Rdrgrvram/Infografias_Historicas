@@ -8,7 +8,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     
     if (!nombre || !email || !password) {
@@ -16,15 +16,33 @@ const Register = () => {
       return;
     }
 
-    setError('');
-    console.log('Registro enviado:', { nombre, email, password });
+    try {
+      const response = await fetch('http://localhost:3001/api/usuarios', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          nombre: nombre, 
+          correo: email, 
+          contrasena: password }),
+      });
 
-    // Simular que se registró como editor
-    localStorage.setItem('rol', 'editor');
+      const data = await response.json();
 
-    // Redirigir al dashboard
-    navigate('/dashboard');
-  };
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al registrar el usuario');
+      }
+
+
+    alert('Usuario registrado exitosamente');
+    navigate('/login');
+    }
+    catch (error) {
+      setError(error.message);
+    }
+  }
+  
 
   return (
     <div className="h-screen overflow-hidden bg-fondoInstitucional flex items-center justify-center px-4">

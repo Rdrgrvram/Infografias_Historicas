@@ -6,10 +6,10 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -17,14 +17,33 @@ const Login = () => {
       return;
     }
 
-    setError('');
-    // Simulación de login exitoso
-    console.log('Login enviado:', { email, password });
-    localStorage.removeItem('rol');
-    localStorage.setItem('rol', 'editor');
-    console.log('Rol establecido:', localStorage.getItem('rol'));
-    navigate('/dashboard');
-  };
+    try {
+      const response = await fetch('http://localhost:3001/api/usuarios/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          correo: email, 
+          contrasena: password }),
+      });
+
+      const data =  await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al iniciar sesión');
+      }
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('rol', data.rol || 'editor');
+      localStorage.setItem('nombre', data.nombre || '');
+
+      alert('Inicio de sesión exitoso');
+      navigate('/dashboard');
+    }
+    catch (error) {
+      setError(error.message);
+    }
+  };    
 
   return (
     <div className="h-screen overflow-hidden bg-fondoInstitucional flex items-center justify-center px-4">

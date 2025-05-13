@@ -7,7 +7,7 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!correo || !password) {
@@ -16,10 +16,33 @@ const AdminLogin = () => {
     }
 
     // 🔐 Aquí se haría la validación real (backend)
-    // ⚠️ Por ahora es simulación
-    localStorage.setItem('rol', 'admin');
-    console.log('Login como admin confirmado');
-    navigate('/dashboard');
+    try {
+      const response = await fetch('http://localhost:3001/api/usuarios/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ correo, contrasena: password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || 'Error al iniciar sesión');
+        return;
+      }
+      if (data.rol !== 'administrador') {
+        setError('No tienes permisos para acceder a esta sección');
+        return;
+      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('rol', data.rol );
+      localStorage.setItem('nombre', data.nombre );
+
+      console.log('Login como admin confirmado');
+      navigate('/dashboard');
+  }catch (error) {
+      setError('Error de conexión al servidor');
+    }
   };
 
   return (

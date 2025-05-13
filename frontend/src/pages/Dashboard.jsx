@@ -5,7 +5,6 @@ import {
   Search,
   FileText,
   Home,
-  Database,
   Layers,
   Users,
   LayoutDashboard,
@@ -55,11 +54,11 @@ const Dashboard = () => {
         <nav className="space-y-4 text-sm">
           <SidebarItem icon={<Home size={18} />} label="Dashboard" active={vistaActiva === 'inicio'} onClick={() => setVistaActiva('inicio')} />
 
-          {(rol === 'editor' || rol === 'admin') && (
+          {(rol === 'editor' || rol === 'administrador') && (
             <SidebarItem icon={<FolderOpen size={18} />} label="Mis Infografías" active={vistaActiva ==='mis'} onClick={() => setVistaActiva('mis')} />
           )}
 
-          {(rol === 'editor' || rol === 'admin') && (
+          {(rol === 'editor' || rol === 'administrador') && (
             <SidebarItem icon={<FileText size={18} />} label="Crear Infografía" active={vistaActiva ==='crear'} onClick={() => setVistaActiva('crear')} />
           )}
 
@@ -67,7 +66,7 @@ const Dashboard = () => {
 
           <SidebarItem icon={<Search size={18} />} label="Explorar" active={vistaActiva === 'explorar'} onClick={() => setVistaActiva('explorar')} />
 
-          {rol === 'admin' && (
+          {rol === 'administrador' && (
             <SidebarItem icon={<Users size={18} />} label="Usuarios" active={vistaActiva === 'usuarios'} onClick={() => setVistaActiva('usuarios')} />
           )}
         </nav>
@@ -77,23 +76,35 @@ const Dashboard = () => {
       <main className="flex-1 bg-gray-50 p-10">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-1">Hola, Rodrigo 👋</h1>
+            <h1 className="text-3xl font-bold mb-1">
+              Hola, {localStorage.getItem('nombre') || 'usuarios'} 👋</h1>
             <p className="text-sm text-gray-600">
               Rol actual: <strong>{rol}</strong>
             </p>
           </div>
           <div className="text-right">
-            <select className="border border-gray-300 px-3 py-1 rounded text-sm">
-              <option>Rodrigo</option>
-              <option>Salir</option>
-            </select>
+          <select
+  className="border border-gray-300 px-3 py-1 rounded text-sm"
+  onChange={(e) => {
+    if (e.target.value === 'logout') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('rol');
+      localStorage.removeItem('nombre');
+      window.location.href = '/login'; // o usa navigate('/login') si estás usando useNavigate
+    }
+  }}
+>
+  <option value="">{localStorage.getItem('nombre') || 'Usuario'}</option>
+  <option value="logout">Salir</option>
+</select>
+
           </div>
         </div>
 
         {/* VISTAS */}
         {vistaActiva === 'inicio' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
-            {(rol === 'editor' || rol === 'admin') && (
+            {(rol === 'editor' || rol === 'administrador') && (
               <>
                 <CardDashboard icon={<Plus size={28} />} label="Crear nueva infografía" onClick={() => setVistaActiva('crear')} />
                 <CardDashboard icon={<FolderOpen size={28} />} label="Ver infografías guardadas" onClick={() => setVistaActiva('mis')} />
@@ -104,9 +115,9 @@ const Dashboard = () => {
           </div>
         )}
 
-        {vistaActiva === 'crear' && (rol === 'editor' || rol === 'admin') && <CrearInfografia />}
+        {vistaActiva === 'crear' && (rol === 'editor' || rol === 'administrador') && <CrearInfografia />}
 
-        {vistaActiva === 'mis' && (rol === 'editor' || rol === 'admin') && (
+        {vistaActiva === 'mis' && (rol === 'editor' || rol === 'administrador') && (
           <div>
             <h2 className="text-2xl font-bold mb-6 text-fondoInstitucional">Mis Infografías</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -119,7 +130,7 @@ const Dashboard = () => {
 
         {vistaActiva === 'plantillas' && <PlantillasInfografia />}
         {vistaActiva === 'explorar' && <ExplorarInfografias />}
-        {vistaActiva === 'usuarios' && rol === 'admin' && <GestionUsuarios />}
+        {vistaActiva === 'usuarios' && rol === 'administrador' && <GestionUsuarios />}
       </main>
     </div>
   );
