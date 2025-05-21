@@ -7,6 +7,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword] = useState(false);
+  const [token2FA, setToken2FA] = useState('');
+  const [userId, setUserId] = useState(null);
+  const [show2FA, setShow2FA] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -33,6 +36,12 @@ const Login = () => {
         throw new Error(data.message || 'Error al iniciar sesión');
       }
 
+      if(data.requiere2FA) {
+        setUserId(data.userId);
+        setShow2FA(true);
+        return;
+      }
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('rol', data.rol || 'editor');
       localStorage.setItem('nombre', data.nombre || '');
@@ -45,19 +54,40 @@ const Login = () => {
     }
   };    
 
+  const handle2FAVerify = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/usuarios/2fa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, token: token2FA }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Código 2FA inválido');
+      }
+
+      localStorage.setItem('token', data.token);
+      alert('Inicio de sesión con 2FA exitoso');
+      navigate('/dashboard');
+
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-fondoInstitucional flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-lg" data-aos="zoom-in">
         <h2 className="text-3xl font-bold text-center text-fondoInstitucional mb-6 font-inter">
           Iniciar Sesión
         </h2>
+         {error && <div className="text-red-600 text-sm font-medium text-center">{error}</div>}
 
+        {!show2FA ? (
         <form onSubmit={handleSubmit} className="space-y-5">
-          {error && (
-            <div className="text-red-600 text-sm font-medium text-center">{error}</div>
-          )}
-
-          <div>
+           <div>
             <label className="block text-gray-700 font-semibold mb-1 font-inter">
               Correo electrónico
             </label>
@@ -101,7 +131,27 @@ const Login = () => {
             Iniciar Sesión
           </button>
         </form>
-
+         ) : (
+        
+        <div className="space-y-5">
+            <label className="block text-gray-700 font-semibold font-inter">
+              Código de autenticación 2FA
+            </label>
+            <input
+              type="text"
+              value={token2FA}
+              onChange={(e) => setToken2FA(e.target.value)}
+              placeholder="123456"
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            <button
+              onClick={handle2FAVerify}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded font-semibold transition duration-200"
+            >
+              Verificar 2FA
+            </button>
+          </div>
+        )}
         {/* Registro */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">¿No tienes una cuenta?</p>

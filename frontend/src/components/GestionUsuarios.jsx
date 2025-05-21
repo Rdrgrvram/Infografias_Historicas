@@ -1,12 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, PlusCircle, X } from 'lucide-react';
+
+
+
 
 const GestionUsuarios = () => {
   const [usuarios, setUsuarios] = useState([
     { id: 1, nombre: 'Juan Pérez', correo: 'juan@example.com', rol: 'editor' },
     { id: 2, nombre: 'Ana Torres', correo: 'ana@example.com', rol: 'invitado' },
     { id: 3, nombre: 'Luis Rojas', correo: 'luis@example.com', rol: 'admin' },
-  ]);
+  ]); 
+
+  useEffect(() => {
+  const fetchUsuarios = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/usuarios');
+      const data = await response.json();
+      setUsuarios(data);
+    } catch (error) {
+      console.error('Error fetching usuarios:', error);
+    }
+  };
+  fetchUsuarios();
+}, []);
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [usuarioEditandoId, setUsuarioEditandoId] = useState(null);
@@ -65,25 +81,41 @@ const GestionUsuarios = () => {
     return Object.keys(err).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validarFormulario()) return;
 
-    if (usuarioEditandoId) {
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === usuarioEditandoId ? { ...u, ...usuarioForm } : u
-        )
-      );
-    } else {
-      const nuevoUsuario = {
-        ...usuarioForm,
-        id: Date.now(),
-      };
-      setUsuarios([...usuarios, nuevoUsuario]);
-    }
+    try {
+      if (usuarioEditandoId) {
+        const response = await fetch(`http://localhost:3001/api/usuarios/${usuarioEditandoId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(usuarioForm),
+        });
+
+        const updated= await response.json();
+        setUsuarios((prev) =>
+          prev.map((u) => (u.id === updated.id ? updated : u))
+        );
+      } else {
+        const response = await fetch('http://localhost:3001/api/usuarios', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(usuarioForm),
+        });
+        const nuevoUsuario = await response.json();
+        setUsuarios((prev) => [...prev, nuevoUsuario]);
+      }
 
     handleCerrarFormulario();
+    }
+    catch (error) {
+      console.error('Error al guardar el usuario:', error);
+    }
   };
 
   const usuariosFiltrados = usuarios.filter((u) => {
