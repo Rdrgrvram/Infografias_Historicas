@@ -1,60 +1,87 @@
 import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, PlusCircle, X } from 'lucide-react';
 
-
-
+const getToken = () => localStorage.getItem('token');
 
 const GestionUsuarios = () => {
-  const [usuarios, setUsuarios] = useState([
-    { id: 1, nombre: 'Juan Pérez', correo: 'juan@example.com', rol: 'editor' },
-    { id: 2, nombre: 'Ana Torres', correo: 'ana@example.com', rol: 'invitado' },
-    { id: 3, nombre: 'Luis Rojas', correo: 'luis@example.com', rol: 'admin' },
-  ]); 
+  const [usuarios, setUsuarios] = useState([]);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [usuariosPorPagina, setUsuariosPorPagina] = useState(10);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [usuarioEditandoId, setUsuarioEditandoId] = useState(null); 
+  const [usuarioForm, setUsuarioForm] = useState({
+    nombre: '',
+    correo: '',
+    rol: 'editor',
+    contrasena: '',
+  });
+  const [errores, setErrores] = useState({});
+  const [filtroBusqueda, setFiltroBusqueda] = useState('');
+  const [filtroRol, setFiltroRol] = useState('todos');
 
   useEffect(() => {
-  const fetchUsuarios = async () => {
+    const fetchUsuarios = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/usuarios');
+      const token = getToken();
+      const response = await fetch('http://localhost:3001/api/usuarios',{
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Error al obtener los usuarios');
+      }
+
       const data = await response.json();
+
+      console.log('Usuarios obtenidos:', data);
+      if (Array.isArray(data)) {
       setUsuarios(data);
+      }else if (Array.isArray(data.usuarios)) {
+        setUsuarios(data.usuarios);
+      }else{
+        console.error('la respuesta no es un array', data);
+        setUsuarios([]);
+      }
     } catch (error) {
       console.error('Error fetching usuarios:', error);
     }
   };
   fetchUsuarios();
 }, []);
-
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [usuarioEditandoId, setUsuarioEditandoId] = useState(null);
-  const [usuarioForm, setUsuarioForm] = useState({
-    nombre: '',
-    correo: '',
-    rol: 'editor',
-    password: '',
-  });
-  const [errores, setErrores] = useState({});
-
-  const [filtroBusqueda, setFiltroBusqueda] = useState('');
-  const [filtroRol, setFiltroRol] = useState('todos');
-  const [paginaActual, setPaginaActual] = useState(1);
-  const [usuariosPorPagina, setUsuariosPorPagina] = useState(5);
-
+  
   const handleEditar = (usuario) => {
-    setUsuarioForm({ ...usuario, password: '' });
+    setUsuarioForm({ ...usuario, contrasena: '' });
     setUsuarioEditandoId(usuario.id);
     setMostrarFormulario(true);
     setErrores({});
   };
 
-  const handleEliminar = (id) => {
-    const confirmar = window.confirm('¿Eliminar este usuario?');
-    if (confirmar) {
-      setUsuarios(usuarios.filter((u) => u.id !== id));
+  const handleEliminar = async (id) => {
+    const confirmar = window.confirm('¿Estás seguro de eliminar este usuario?');
+    if (confirmar){
+      try {
+        const response = await fetch(`http://localhost:3001/api/usuarios/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`,
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al eliminar el usuario');
+        }
+
+        setUsuarios((prev) => prev.filter((usuario) => usuario.id !== id));
+      } catch (error) {
+        alert(error.message);
+      }
     }
   };
 
   const handleAbrirFormularioNuevo = () => {
-    setUsuarioForm({ nombre: '', correo: '', rol: 'editor', password: '' });
+    setUsuarioForm({ nombre: '', correo: '', rol: 'editor', contrasena: '' });
     setUsuarioEditandoId(null);
     setErrores({});
     setMostrarFormulario(true);
@@ -76,52 +103,66 @@ const GestionUsuarios = () => {
     if (!usuarioForm.nombre.trim()) err.nombre = 'Nombre requerido';
     if (!usuarioForm.correo.trim()) err.correo = 'Correo requerido';
     if (!/\S+@\S+\.\S+/.test(usuarioForm.correo)) err.correo = 'Correo no válido';
-    if (!usuarioEditandoId && !usuarioForm.password) err.password = 'Contraseña requerida';
+    if (!usuarioEditandoId && !usuarioForm.contrasena) err.contrasena = 'Contraseña requerida';
     setErrores(err);
     return Object.keys(err).length === 0;
   };
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
     if (!validarFormulario()) return;
 
     try {
       if (usuarioEditandoId) {
+        const token = getToken();
         const response = await fetch(`http://localhost:3001/api/usuarios/${usuarioEditandoId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify(usuarioForm),
         });
 
-        const updated= await response.json();
-        setUsuarios((prev) =>
-          prev.map((u) => (u.id === updated.id ? updated : u))
+        if(!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al actualizar el usuario');
+        }
+
+        const updatedData= await response.json();
+        setUsuarios((prev) => prev.map((u) => (u.id === updatedData.usuario.id ? updatedData.usuario : u))
         );
       } else {
         const response = await fetch('http://localhost:3001/api/usuarios', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`,
           },
           body: JSON.stringify(usuarioForm),
         });
+
+      if(!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al crear el usuario');
+        }
         const nuevoUsuario = await response.json();
-        setUsuarios((prev) => [...prev, nuevoUsuario]);
+        setUsuarios(prev => [...prev, nuevoUsuario]);
       }
 
     handleCerrarFormulario();
     }
     catch (error) {
-      console.error('Error al guardar el usuario:', error);
+      alert(error.message);
     }
   };
 
   const usuariosFiltrados = usuarios.filter((u) => {
-    const coincideTexto =
-      u.nombre.toLowerCase().includes(filtroBusqueda.toLowerCase()) ||
-      u.correo.toLowerCase().includes(filtroBusqueda.toLowerCase());
+    const nombre = u.nombre ? u.nombre.toLowerCase() : '';
+    const correo = u.correo ? u.correo.toLowerCase() : '';
+    const filtro= filtroBusqueda.toLowerCase();
+    const coincideTexto = nombre.includes(filtro) || correo.includes(filtro);
     const coincideRol = filtroRol === 'todos' || u.rol === filtroRol;
     return coincideTexto && coincideRol;
   });
@@ -163,7 +204,7 @@ const GestionUsuarios = () => {
             className="px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-400"
           >
             <option value="todos">Todos los roles</option>
-            <option value="admin">Administrador</option>
+            <option value="administrador">Administrador</option>
             <option value="editor">Editor</option>
             <option value="invitado">Invitado</option>
           </select>
@@ -285,7 +326,7 @@ const GestionUsuarios = () => {
                   onChange={handleChange}
                   className="w-full border border-gray-300 px-4 py-2 rounded focus:ring-2 focus:ring-orange-400"
                 >
-                  <option value="admin">Administrador</option>
+                  <option value="administrador">Administrador</option>
                   <option value="editor">Editor</option>
                   <option value="invitado">Invitado</option>
                 </select>
@@ -294,13 +335,13 @@ const GestionUsuarios = () => {
                 <label className="block text-sm font-semibold mb-1">Contraseña</label>
                 <input
                   type="password"
-                  name="password"
-                  value={usuarioForm.password}
+                  name="contrasena"
+                  value={usuarioForm.contrasena}
                   onChange={handleChange}
                   className="w-full border border-gray-300 px-4 py-2 rounded focus:ring-2 focus:ring-orange-400"
                 />
-                {!usuarioEditandoId && errores.password && (
-                  <p className="text-red-600 text-sm">{errores.password}</p>
+                {!usuarioEditandoId && errores.contrasena && (
+                  <p className="text-red-600 text-sm">{errores.contrasena}</p>
                 )}
               </div>
               <button
